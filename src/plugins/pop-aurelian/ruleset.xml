@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<ruleset name="Wordpress-Test-WordPress-Extra">
+	<description>Custom rules based on Wordpress Extra</description>
+	<rule ref="WordPress-Extra">
+		<exclude-pattern>*.js</exclude-pattern>
+		<exclude name="WordPress.Security.EscapeOutput.OutputNotEscaped"/>
+		<exclude name="WordPress.Files.FileName.NotHyphenatedLowercase"/>
+		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
+		<exclude name="WordPress.DateTime.RestrictedFunctions.date_date"/>
+		<exclude name="Squiz.Commenting.InlineComment.InvalidEndChar"/>
+		<exclude name="Squiz.Commenting.FunctionComment.ParamCommentFullStop"/>
+	</rule>
+	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<properties>
+			<property name="customPropertiesWhitelist" value="childNodes,firstChild,parentNode,tagName" type="array" />
+		</properties>
+	</rule>
+</ruleset>

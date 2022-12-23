@@ -1,0 +1,79 @@
+#!/bin/bash
+
+STANDARD="./src/plugins/pop-aurelian/ruleset.xml"
+BIN="./src/plugins/pop-aurelian/vendor/bin"
+
+echo
+echo "$(tput setaf 2)Running Cypress Application Tests"
+echo
+
+echo
+CYPRESS=("npx" "--prefix" "src/plugins/pop-aurelian" "cypress" "run" "--project" "src/plugins/pop-aurelian/" "--config" "video=false,screenshotOnRunFailure=false")
+"${CYPRESS[@]}"
+
+if [ $? != 0 ]
+then
+    echo "$(tput setaf 1)!!!Cypress Application Tests Failed Please fix the issue(s) on order to be able to commit !!!!"
+    echo
+    exit 1
+fi
+
+echo
+echo "PHP_CodeSniffer pre-commit hook – commit with the --no-verify option to skip the hook"
+echo
+
+# Check whether PHP_CodeSniffer can be found
+if [ ! -f "$BIN/phpcs" ]
+then
+    echo "PHP_CodeSniffer not found – is it installed? 'composer require --dev squizlabs/php_codesniffer'"
+    echo
+    exit 1
+fi
+
+src/plugins/pop-aurelian/vendor/bin/phpcs --config-set installed_paths src/plugins/pop-aurelian/vendor/wp-coding-standards/wpcs
+
+
+# Retrieve staged files
+FILES=$(git diff --cached --name-only --diff-filter=ACMR HEAD)
+
+# Run the sniffer
+echo "Running PHP_CodeSniffer using the $STANDARD standard"
+echo
+PHPCS=("$BIN/phpcs" "--ignore=*/wp-content/plugins/*,*/wp-content/mu-plugins/*" "--standard=$STANDARD" "--warning-severity=0" "--filter=gitstaged" "--encoding=utf-8" "-p" ".")
+"${PHPCS[@]}"
+
+# Syntax OK
+if [ $? == 0 ]
+then
+    echo "No violations detected"
+    echo
+    exit 0
+fi
+
+# Fix automatically?
+read -p "Automatically fix violations when possible? [Y/n]: " < /dev/tty
+if [[ ! ("$REPLY" == 'y' || "$REPLY" == 'Y' || "$REPLY" == '') ]]
+then
+    echo
+    exit 1
+fi
+
+# Run the beautifier
+PHPCBF=("$BIN/phpcbf" "--standard=$STANDARD" "--filter=gitstaged" ".")
+"${PHPCBF[@]}"
+
+# Stage the files
+echo "Re-staging updated files"
+echo
+git add ${FILES}
+
+# Run the sniffer again
+"${PHPCS[@]}"
+
+# Some violations remain
+if [ $? != 0 ]
+then
+    echo "PHP_CodeSniffer was not able to fix all of the violations, please fix the remaining ones manually or commit with the --no-verify option"
+    echo
+    exit 1
+fi
